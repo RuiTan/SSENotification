@@ -61,11 +61,11 @@ public class PageParseServiceImpl implements PageParseService {
 
   private boolean isNotificationValid(Element element){
     String notificationTime = element.getElementsByTag("span").get(0).text();
-    String now = DateUtils.formatDateToString(new Date(), DateUtils.YYYY_MM_DD);
-//    Calendar calendar = Calendar.getInstance();
-//    calendar.setTime(new Date());
-//    calendar.add(Calendar.DAY_OF_YEAR, -1);
-//    String now = DateUtils.formatDateToString(calendar.getTime(), DateUtils.YYYY_MM_DD);
+//    String now = DateUtils.formatDateToString(new Date(), DateUtils.YYYY_MM_DD);
+    Calendar calendar = Calendar.getInstance();
+    calendar.setTime(new Date());
+    calendar.add(Calendar.DAY_OF_YEAR, -2);
+    String now = DateUtils.formatDateToString(calendar.getTime(), DateUtils.YYYY_MM_DD);
     return notificationTime.equals(now);
   }
 }

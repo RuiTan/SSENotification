@@ -1,5 +1,9 @@
 package top.guitoubing.ssenotification.pojo.vo;
 
+import top.guitoubing.ssenotification.utils.DateUtils;
+
+import java.util.Date;
+
 public class PageVO {
   private String title;
   private String info;
@@ -38,5 +42,9 @@ public class PageVO {
   @Override
   public String toString() {
     return title + "<br>" + info + "<br>" + content;
+  }
+
+  public static PageVO defaultPageVO(){
+    return new PageVO(DateUtils.formatDateToString(new Date(), DateUtils.YYYY_MM_DD) + " 学院今天无通知~", "", "");
   }
 }

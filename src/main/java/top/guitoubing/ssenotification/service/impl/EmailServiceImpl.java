@@ -7,16 +7,16 @@ import top.guitoubing.ssenotification.service.EmailService;
 import top.guitoubing.ssenotification.utils.DateUtils;
 import com.sun.mail.util.MailSSLSocketFactory;
 
-import javax.mail.Address;
 import javax.mail.Message;
 import javax.mail.MessagingException;
-import javax.mail.Multipart;
 import javax.mail.NoSuchProviderException;
 import javax.mail.Session;
 import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
+import java.io.UnsupportedEncodingException;
 import java.security.GeneralSecurityException;
 import java.util.Date;
 import java.util.Enumeration;
@@ -34,16 +34,14 @@ public class EmailServiceImpl implements EmailService {
   private static String host = emailConfig.getString("mail.host");
   private static String sender = emailConfig.getString("mail.sender");
   private static String key = emailConfig.getString("mail.key");
-  private static String receivers = emailConfig.getString("mail.receivers");
+  private static String[] receivers = emailConfig.getString("mail.receivers").split(",");
+  private static String username = emailConfig.getString("mail.username");
 
   @Override
   public void send(PageVO content) {
-    String[] receiverArray = receivers.split(",");
-    for (String receiver : receiverArray) {
-      MailVO receiverVO = new MailVO(receiver, content);
-      if (!sendEmail(receiverVO)) {
-        logger.warning("邮件发送失败，收件人为：" + receiver);
-      }
+    MailVO receiverVO = new MailVO(content);
+    if (!sendEmail(receiverVO)) {
+      logger.warning("邮件发送失败!");
     }
   }
 
@@ -68,7 +66,7 @@ public class EmailServiceImpl implements EmailService {
     }
     Session session = Session.getInstance(properties);
     try {
-      sendMessage(session.getTransport(), setMessage(session, mailVO.getContent()), mailVO.getReceiver());
+      sendMessage(session.getTransport(), setMessage(session, mailVO.getContent(), receivers));
     } catch (NoSuchProviderException e) {
       logger.warning("transport获取失败");
       return false;
@@ -76,10 +74,10 @@ public class EmailServiceImpl implements EmailService {
     return true;
   }
 
-  private void sendMessage(Transport transport, Message message, String receiver){
+  private void sendMessage(Transport transport, Message message){
     try {
       transport.connect(host, sender, key);
-      transport.sendMessage(message, new Address[]{new InternetAddress(receiver)});
+      transport.sendMessage(message, message.getAllRecipients());
       transport.close();
     } catch (NoSuchProviderException e) {
       logger.warning("获取transport失败");
@@ -88,16 +86,27 @@ public class EmailServiceImpl implements EmailService {
     }
   }
 
-  private Message setMessage(Session session, PageVO content){
+  private Message setMessage(Session session, PageVO content, String[] receivers){
     // 邮件内容
     MimeMessage message = new MimeMessage(session);
     String date = DateUtils.formatDateToString(new Date(), DateUtils.YYYY_MM_DD);
     try {
-      message.setSubject("【软件学院" + date + "通知】-" + content.getTitle());
-      message.setText(content.toString());
-      message.setFrom(new InternetAddress(sender));
+      message.setFrom(new InternetAddress(sender, username));
+      message.setSubject("【软件学院" + date + "通知】-" + content.getTitle(), "UTF-8");
+      for (String receiver : receivers) {
+        message.addRecipient(MimeMessage.RecipientType.TO, new InternetAddress(receiver));
+      }
+
+      MimeMultipart mimeMultipart = new MimeMultipart();
+      MimeBodyPart text = new MimeBodyPart();
+      text.setContent(content.getContent(), "text/html;charset=UTF-8");
+      mimeMultipart.addBodyPart(text);
+      mimeMultipart.setSubType("related");
+      message.setContent(mimeMultipart);
     } catch (MessagingException e) {
       logger.warning("邮件构建失败");
+    } catch (UnsupportedEncodingException e) {
+      logger.warning("发件人信息错误");
     }
     return message;
   }

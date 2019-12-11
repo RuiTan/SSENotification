@@ -10,7 +10,6 @@ import top.guitoubing.ssenotification.utils.DateUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.logging.Logger;
@@ -32,6 +31,7 @@ public class PageParseServiceImpl implements PageParseService {
       for (Element element : notificationList) {
         if (isNotificationValid(element)) {
           Element notification = element.getElementsByTag("a").get(0);
+
           result.add(generatePageVO(notification.attr("href")));
         } else {
           break;
@@ -51,7 +51,7 @@ public class PageParseServiceImpl implements PageParseService {
       return new PageVO(
               response.getElementsByClass("view-title").get(0).text(),
               response.getElementsByClass("view-info").get(0).text(),
-              response.getElementsByClass("view-cnt").get(0).text()
+              correctContent(response.getElementsByClass("view-cnt").get(0))
               );
     } catch (IOException e) {
       e.printStackTrace();
@@ -59,7 +59,32 @@ public class PageParseServiceImpl implements PageParseService {
     return null;
   }
 
+  private String correctContent(Element content){
+    modifyAttachmentURL(content);
+    modifyImageURL(content);
+    return content.html();
+  }
+
+  private void modifyAttachmentURL(Element content){
+    for (Element a : content.getElementsByTag("a")) {
+      String href = a.attr("href");
+      if (href.startsWith("/")) {
+        a.attr("href", HOST + href);
+      }
+    }
+  }
+
+  private void modifyImageURL(Element content) {
+    for (Element img : content.getElementsByTag("img")){
+      String href = img.attr("href");
+      if (href.startsWith("/")) {
+        img.attr("href", HOST + href);
+      }
+    }
+  }
+
   private boolean isNotificationValid(Element element){
+//    return true;
     String notificationTime = element.getElementsByTag("span").get(0).text();
     String now = DateUtils.formatDateToString(new Date(), DateUtils.YYYY_MM_DD);
 //    Calendar calendar = Calendar.getInstance();

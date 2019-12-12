@@ -18,6 +18,7 @@ import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 import java.io.UnsupportedEncodingException;
 import java.security.GeneralSecurityException;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.Properties;
@@ -34,7 +35,17 @@ public class EmailServiceImpl implements EmailService {
   private static String host = emailConfig.getString("mail.host");
   private static String sender = emailConfig.getString("mail.sender");
   private static String key = emailConfig.getString("mail.key");
-  private static String[] receivers = emailConfig.getString("mail.receivers").split(",");
+
+  private static String[] getReceivers() {
+    String receiverProperty = System.getProperty("RECEIVERS");
+    if (receiverProperty == null || receiverProperty.isEmpty()) {
+      System.setProperty("RECEIVERS", emailConfig.getString("mail.receivers"));
+      return emailConfig.getString("mail.receivers").split(",");
+    } else {
+      return receiverProperty.split(",");
+    }
+  }
+
   private static String username = emailConfig.getString("mail.username");
 
   @Override
@@ -45,7 +56,7 @@ public class EmailServiceImpl implements EmailService {
     }
   }
 
-  public boolean sendEmail(MailVO mailVO) {
+  private boolean sendEmail(MailVO mailVO) {
 
     Properties properties = new Properties();
 
@@ -66,7 +77,9 @@ public class EmailServiceImpl implements EmailService {
     }
     Session session = Session.getInstance(properties);
     try {
+      String[] receivers = getReceivers();
       sendMessage(session.getTransport(), setMessage(session, mailVO.getContent(), receivers));
+      logger.info("邮件成功发送给：" + Arrays.toString(receivers));
     } catch (NoSuchProviderException e) {
       logger.warning("transport获取失败");
       return false;

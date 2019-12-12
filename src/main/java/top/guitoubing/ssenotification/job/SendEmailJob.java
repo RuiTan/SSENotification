@@ -21,9 +21,7 @@ public class SendEmailJob extends QuartzJobBean {
   @Override
   protected void executeInternal(JobExecutionContext jobExecutionContext) throws JobExecutionException {
     List<PageVO> pageVOS = pageParseService.parseNotificationPage();
-    if (pageVOS == null || pageVOS.isEmpty()) {
-      emailService.send(PageVO.defaultPageVO());
-    } else {
+    if (pageVOS != null && !pageVOS.isEmpty()) {
       for (PageVO pageVO : pageVOS) {
         emailService.send(pageVO);
       }

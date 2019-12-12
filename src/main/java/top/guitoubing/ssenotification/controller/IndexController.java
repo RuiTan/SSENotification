@@ -19,4 +19,19 @@ public class IndexController {
   public ResponseVO receiveNotification(){
       return new ResponseVO(ResponseVO.SUCCESS_STATUS, "邮件发送成功");
   }
+
+  @RequestMapping(value = "addReceiver")
+  public void addReceiver(String receiver){
+    String regex = "^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+$";
+    if (receiver.matches(regex)) {
+      System.setProperty("RECEIVERS", System.getProperty("RECEIVERS") + "," + receiver);
+      logger.info("收件人" + receiver + "添加成功");
+    }
+  }
+
+  @RequestMapping(value = "setLastView")
+  public void setLastView(Long lastViewId) {
+    System.setProperty("LAST_VIEW", String.valueOf(lastViewId));
+    logger.info("环境变量LAST_VIEW设置为：" + System.getProperty("LAST_VIEW"));
+  }
 }

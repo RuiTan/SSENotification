@@ -20,7 +20,7 @@ public class QuartzConfig {
   public Trigger sendEmailTrigger(){
     return TriggerBuilder.newTrigger().forJob(sendEmailJob())
             .withIdentity("sendEmailTrigger")
-            .withSchedule(CronScheduleBuilder.cronSchedule("00 59 23 * * ?"))
+            .withSchedule(CronScheduleBuilder.cronSchedule("0 */1 * * * ?"))
             .build();
   }
 

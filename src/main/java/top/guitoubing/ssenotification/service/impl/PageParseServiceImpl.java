@@ -3,6 +3,7 @@ package top.guitoubing.ssenotification.service.impl;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.springframework.stereotype.Service;
 import top.guitoubing.ssenotification.pojo.vo.PageVO;
 import top.guitoubing.ssenotification.service.PageParseService;
@@ -20,6 +21,22 @@ public class PageParseServiceImpl implements PageParseService {
   private static final Logger logger = Logger.getLogger(PageParseServiceImpl.class.getName());
   private static final String HOST = "http://sse.tongji.edu.cn";
   private static final String BASE_ROUTE = "/data/list/xwdt";
+  private static Long LAST_VIEW;
+
+  static {
+    String lastView = System.getProperty("LAST_VIEW");
+    if (lastView == null || lastView.isEmpty()) {
+      try {
+        LAST_VIEW = getYesterdayViewId();
+        System.setProperty("LAST_VIEW", String.valueOf(LAST_VIEW));
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    } else {
+      LAST_VIEW = Long.valueOf(lastView);
+    }
+    logger.info("环境变量LAST_VIEW为：" + LAST_VIEW);
+  }
 
   @Override
   public List<PageVO> parseNotificationPage() {
@@ -37,9 +54,37 @@ public class PageParseServiceImpl implements PageParseService {
           break;
         }
       }
+      updateLastView();
       return result;
     } catch (IOException e) {
       logger.warning("connect failed: " + HOST + BASE_ROUTE);
+    }
+    return null;
+  }
+
+  private void updateLastView() throws IOException {
+    LAST_VIEW = getViewIdByPage();
+    logger.info("环境变量LAST_VIEW更新为：" + LAST_VIEW);
+  }
+
+  private static Long getViewIdByElement(Element element){
+    String href = element.getElementsByTag("a").get(0).attr("href");
+    return Long.valueOf(href.substring(href.length() - 4));
+  }
+
+  private Long getViewIdByPage() throws IOException {
+    String href = Jsoup.connect(HOST + BASE_ROUTE).get().getElementsByClass("data-list").get(0).child(0).getElementsByTag("a").get(0).attr("href");
+    return Long.valueOf(href.substring(href.length() - 4));
+  }
+
+  private static Long getYesterdayViewId() throws IOException {
+    Elements elements = Jsoup.connect(HOST + BASE_ROUTE).get().getElementsByClass("data-list").get(0).children();
+    String today = DateUtils.formatDateToString(new Date(), DateUtils.YYYY_MM_DD);
+    for (Element element : elements) {
+      String viewDate = element.getElementsByTag("span").get(0).text();
+      if (!viewDate.equals(today)) {
+        return getViewIdByElement(element);
+      }
     }
     return null;
   }
@@ -84,13 +129,7 @@ public class PageParseServiceImpl implements PageParseService {
   }
 
   private boolean isNotificationValid(Element element){
-//    return true;
-    String notificationTime = element.getElementsByTag("span").get(0).text();
-    String now = DateUtils.formatDateToString(new Date(), DateUtils.YYYY_MM_DD);
-//    Calendar calendar = Calendar.getInstance();
-//    calendar.setTime(new Date());
-//    calendar.add(Calendar.DAY_OF_YEAR, -1);
-//    String now = DateUtils.formatDateToString(calendar.getTime(), DateUtils.YYYY_MM_DD);
-    return notificationTime.equals(now);
+    Long viewId = getViewIdByElement(element);
+    return viewId > LAST_VIEW;
   }
 }
